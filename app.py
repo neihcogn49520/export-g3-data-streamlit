@@ -94,8 +94,9 @@ if sheet_url and (export_buzz_button or export_sources_button or export_posts_bu
         st.error("❗ Missing required columns in one of the tables.")
         st.stop()
 
-    from_dt = datetime.combine(date_range[0], datetime.min.time()).isoformat() + 'Z'
-    to_dt = datetime.combine(date_range[1], datetime.max.time()).isoformat() + 'Z'
+    from_dt = (datetime.combine(date_range[0], datetime.min.time()) - timedelta(hours=7)).isoformat() + 'Z'
+    to_dt = (datetime.combine(date_range[1], datetime.max.time()) - timedelta(hours=7)).isoformat() + 'Z'
+
 
     st.info("🔍 Processing topics...")
 

@@ -9,7 +9,14 @@ import streamlit as st
 def get_total_buzz(data_rows):
     if not isinstance(data_rows, list):
         return 0
-    return sum(day.get("count", 0) for day in data_rows if isinstance(day, dict))
+
+    total = 0
+    for day in data_rows:
+        if isinstance(day, dict) and "count" in day:
+            total += day["count"]
+        else:
+            st.warning(f"Skipped row: {day}")
+    return total
 
 def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, headers):
     st.info("🔍 Exporting Total Buzz...")
@@ -22,13 +29,14 @@ def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint,
             continue
 
         topic_id = int(topic_id_raw)
-        topic_type = topic_row.get('TOPIC TYPE', '').strip()
         topic_name = topic_row.get('TOPIC NAME', '').strip()
 
         batch_requests = []
+        search_phrases = []
 
         for _, row in df_params.iterrows():
             search_phrase = row['SEARCH PHRASE']
+            search_phrases.append(search_phrase)
 
             req = {
                 "service": "topics/:topic_id/:service",
@@ -64,8 +72,10 @@ def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint,
 
         for i, r in enumerate(responses):
             param_row = df_params.iloc[i % len(df_params)]
+            search_phrase_used = search_phrases[i % len(search_phrases)]
             
             data_rows = r
+            print(r)
             total_buzz = get_total_buzz(data_rows)
             all_export_data.append({
                 "STT": stt,
@@ -74,7 +84,7 @@ def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint,
                 "DATE RANGE": f"{from_dt[:10]} - {to_dt[:10]}",
                 "LAYER": param_row['LAYER'],
                 "METRICS": param_row['METRICS'],
-                "SEARCH PHRASE": search_phrase,
+                "SEARCH PHRASE": search_phrase_used,
                 "TOTAL BUZZ": total_buzz
             })
             stt += 1

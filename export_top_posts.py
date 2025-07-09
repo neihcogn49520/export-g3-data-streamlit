@@ -15,14 +15,14 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
             continue
 
         topic_id = int(topic_id_raw)
-        topic_type = topic_row.get('TOPIC TYPE', '').strip()
         topic_name = topic_row.get('TOPIC NAME', '').strip()
-        virtual_tag = topic_row.get('TAG FOR VIRTUAL TOPIC', '')
 
         batch_requests = []
+        search_phrases = []
 
         for _, row in df_params.iterrows():
             search_phrase = row['SEARCH PHRASE']
+            search_phrases.append(search_phrase)
 
             req = {
                 "service": "topics/:topic_id/:service",
@@ -41,7 +41,10 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
                         "$visualization_series": "total_mentions",
                         "$visualize_sentiment_comments": False,
                         "$return_zero_value": 1,
-                        "$noise_filter_mode": "EXCLUDE_NOISE_SPAM"
+                        "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
+                        "$source_group_not_in": "off",
+                        "$dashboard": 26036,
+                        "cache_version": 1750214164
                     }
                 }
             }
@@ -58,6 +61,7 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
 
         for i, r in enumerate(responses):
             param_row = df_params.iloc[i % len(df_params)]
+            search_phrase_used = search_phrases[i % len(search_phrases)]
             posts = r.get("data", []) if isinstance(r, dict) else []
 
             for post_data in posts[:10]:  # Top 10 posts
@@ -89,7 +93,7 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
                     "DATE RANGE": f"{from_dt[:10]} - {to_dt[:10]}",
                     "LAYER": param_row['LAYER'],
                     "METRICS": param_row['METRICS'],
-                    "COMBINED PHRASE": search_phrase,
+                    "SEARCH PHRASE": search_phrase_used,
                     "POST": post_cell,
                     "SOURCE": source_cell,
                     "BUZZ": buzz_count
