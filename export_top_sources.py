@@ -17,15 +17,14 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
             continue
 
         topic_id = int(topic_id_raw)
+        topic_type = topic_row.get('TOPIC TYPE', '').strip()
         topic_name = topic_row.get('TOPIC NAME', '').strip()
+        virtual_tag = topic_row.get('TAG FOR VIRTUAL TOPIC', '')
 
         batch_requests = []
-        search_phrases = []
 
         for _, row in df_params.iterrows():
             search_phrase = row['SEARCH PHRASE']
-            search_phrases.append(search_phrase)
-            
 
             req = {
                 "service": "topics/:topic_id/:service",
@@ -33,25 +32,13 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
                 "params": {
                     "route": {
                         "topic_id": topic_id,
-                        "service": "top-sources-by-field"
+                        "service": "top-sources"
                     },
                     "query": {
                         "$search": search_phrase,
                         "$date_from": from_dt,
                         "$date_to": to_dt,
-                        "cache_version": 1751962756,
-                        "$skip": 0,
-                        "$limit": 50,
-                        "$sum_field": [
-                            "shares",
-                            "comments"
-                        ],
-                        "$visualization_series": "source_total_mentions",
-                        "$visualize_sentiment_comments": False,
-                        "$return_zero_value": 1,
-                        "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
-                        "$source_group_not_in": "off",
-                        "$dashboard": 26036
+                        "cache_version": 1750214164
                     }
                 }
             }
@@ -68,7 +55,6 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
 
         for i, r in enumerate(responses):
             param_row = df_params.iloc[i % len(df_params)]
-            search_phrase_used = search_phrases[i % len(search_phrases)]
 
             # Safely get the 'data' key if the response is a dict
             source_list = r.get("data", []) if isinstance(r, dict) else r
@@ -95,7 +81,7 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
                     "DATE RANGE": f"{from_dt[:10]} - {to_dt[:10]}",
                     "LAYER": param_row['LAYER'],
                     "METRICS": param_row['METRICS'],
-                    "SEARCH PHRASE": search_phrase_used,
+                    "SEARCH PHRASE": search_phrase,
                     "SOURCE": source_cell,
                     "BUZZ": buzz_count
                 })
