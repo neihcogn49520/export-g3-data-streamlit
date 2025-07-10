@@ -69,7 +69,14 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
                 short_content = post_data.get("short_content", "").strip().replace('"', '')  # Remove double quotes
                 source_link = post_data.get("source_link", "")
                 source_name = post_data.get("source_name", "")
-                buzz_count = post_data.get("total_mentions", 0)
+                
+                # Get metric name
+                metric_name = str(param_row['METRICS']).strip().lower()
+                # Extract buzz count based on metric
+                if "views" in metric_name.lower():
+                    buzz_count = post_data.get("views", 0)
+                else:
+                    buzz_count = post_data.get("total_mentions", 0)
 
                 # Truncate content to 100 characters
                 display_text = short_content[:100] + "..." if len(short_content) > 100 else short_content

@@ -36,19 +36,18 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
                         "service": "top-sources-by-field"
                     },
                     "query": {
-                        "$search": search_phrase,
-                        "$date_from": from_dt,
-                        "$date_to": to_dt,
-                        "cache_version": 1751962756,
                         "$skip": 0,
                         "$limit": 50,
                         "$sum_field": [
+                            "engagement_total",
+                            "likes",
                             "shares",
                             "comments"
                         ],
-                        "$visualization_series": "source_total_mentions",
-                        "$visualize_sentiment_comments": False,
-                        "$return_zero_value": 1,
+                        "$search": search_phrase,
+                        "$date_from": from_dt,
+                        "$date_to": to_dt,
+                        "$sort_field": "source_total_mentions",
                         "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
                         "$source_group_not_in": "off",
                         "$dashboard": 26036
@@ -80,7 +79,14 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
             for source_data in source_list[:50]:  # Top 50
                 source_link = source_data.get("link") or source_data.get("source") or ""
                 source_name = source_data.get("name", "")
-                buzz_count = source_data.get("count", 0)
+                
+                # Get metric name
+                metric_name = str(param_row['METRICS']).strip().lower()
+                # Extract buzz count based on metric
+                if "views" in metric_name.lower():
+                    buzz_count = source_data.get("views", 0)
+                else:
+                    buzz_count = source_data.get("count", 0)
 
                 # Build HYPERLINK for source name
                 if source_link and source_name:

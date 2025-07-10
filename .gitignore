@@ -1,3 +1,7 @@
 .env
 default.ini
 credentials.json
+tests.py
+tests.json
+config/default.ini
+config/default.ini

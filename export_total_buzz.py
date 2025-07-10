@@ -6,18 +6,6 @@ import json
 from gspread_dataframe import set_with_dataframe
 import streamlit as st
 
-def get_total_buzz(data_rows):
-    if not isinstance(data_rows, list):
-        return 0
-
-    total = 0
-    for day in data_rows:
-        if isinstance(day, dict) and "count" in day:
-            total += day["count"]
-        else:
-            st.warning(f"Skipped row: {day}")
-    return total
-
 def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, headers):
     st.info("🔍 Exporting Total Buzz...")
     all_export_data = []
@@ -44,25 +32,22 @@ def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint,
                 "params": {
                     "route": {
                         "topic_id": topic_id,
-                        "service": "mentions-trendline"
+                        "service": "mentions-statistics"
                     },
                     "query": {
-                        "$range_type": "daily",
-                        "$group_by": "mention_type",
                         "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
                         "$source_group_not_in": "off",
                         "$dashboard": 26036,
                         "$search": search_phrase,
                         "$date_from": from_dt,
                         "$date_to": to_dt,
-                        "cache_version": 1750214164
                     }
                 }
             }
             batch_requests.append(req)
 
         try:
-            api_url = f"{api_endpoint}?topic_id={topic_id}&service=mentions-trendline"
+            api_url = f"{api_endpoint}?topic_id={topic_id}&service=mentions-statistics"
             resp = requests.post(api_url, headers=headers, data=json.dumps({"batch": batch_requests}))
             resp.raise_for_status()
             responses = resp.json()
@@ -73,10 +58,23 @@ def export_total_buzz(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint,
         for i, r in enumerate(responses):
             param_row = df_params.iloc[i % len(df_params)]
             search_phrase_used = search_phrases[i % len(search_phrases)]
+
+            # Get metric name
+            metric_name = str(param_row['METRICS']).strip().lower()
+
+            # Extract total buzz value
+            if not isinstance(r, dict):
+                st.warning(f"⚠️ Unexpected response format for topic {topic_id}: {r}")
+                continue
             
-            data_rows = r
-            print(r)
-            total_buzz = get_total_buzz(data_rows)
+            data = r  # already a dict
+            # st.error(data)
+
+            if "views" in metric_name.lower():
+                total_buzz = data.get("views", 0)
+            else:
+                total_buzz = data.get("total_collectable_mentions", 0)
+
             all_export_data.append({
                 "STT": stt,
                 "ID TOPIC": topic_id,
