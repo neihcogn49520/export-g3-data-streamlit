@@ -5,26 +5,35 @@ from datetime import datetime, timedelta, date
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import json
-from gspread_dataframe import set_with_dataframe
 from configparser import ConfigParser
-from export_total_buzz import export_total_buzz
-from export_top_sources import export_top_sources
-from export_top_posts import export_top_posts
+from script.export_total_buzz import export_total_buzz
+from script.export_top_sources import export_top_sources
+from script.export_top_posts import export_top_posts
+from auth import get_token
 
 # === Load credentials from config file ===
 config = ConfigParser()
 config.read("config/default.ini")
 
-USERNAME = config.get("DEFAULT", "USERNAME")
-PASSWORD = config.get("DEFAULT", "PASSWORD")
+USERNAME = st.secrets["DEFAULT"]["USERNAME"]
+PASSWORD = st.secrets["DEFAULT"]["PASSWORD"]
 API_ENDPOINT = config.get("DEFAULT", "apiBaseUrl") + "/batch"
-AUTH_TOKEN = config.get("DEFAULT", "AUTH_TOKEN")
+
+# Call the token function
+AUTH_TOKEN = get_token()
+if not AUTH_TOKEN:
+    st.error("❌ Failed to retrieve authentication token. Please check your credentials.")
+    st.stop()
 
 # === Google Sheets Auth ===
 @st.cache_resource
 def connect_to_gsheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+    if "gcp_service_account" in st.secrets:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+    else:
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+
     client = gspread.authorize(creds)
     return client
 
@@ -42,7 +51,7 @@ if sheet_url:
         st.error("❗ Invalid Google Sheet URL. Please enter a valid URL.")
         st.stop()
     if "d/" not in sheet_url or "/edit" not in sheet_url:
-        st.error("❗ This sheet cannot edit. Please ensure it has edit or update permission for exporting data to new sheet.")
+        st.error("❗ This sheet cannot edit. Please ensure that it has edit permission for exporting data to new sheet.")
         st.stop()
 
 # Buttons with conditional disabling

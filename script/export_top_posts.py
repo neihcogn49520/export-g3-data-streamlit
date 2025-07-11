@@ -24,6 +24,9 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
             search_phrase = row['SEARCH PHRASE']
             search_phrases.append(search_phrase)
 
+            metric_name = str(row['METRICS']).strip().lower()
+            visualization_series = "views" if "views" in metric_name else "total_mentions"
+
             req = {
                 "service": "topics/:topic_id/:service",
                 "method": "find",
@@ -38,7 +41,7 @@ def export_top_posts(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint, 
                         "$date_to": to_dt,
                         "$skip": 0,
                         "$limit": 10,
-                        "$visualization_series": "total_mentions",
+                        "$visualization_series": visualization_series,
                         "$visualize_sentiment_comments": False,
                         "$return_zero_value": 1,
                         "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
