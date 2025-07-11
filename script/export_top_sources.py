@@ -25,8 +25,32 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
         for _, row in df_params.iterrows():
             search_phrase = row['SEARCH PHRASE']
             search_phrases.append(search_phrase)
-            
+            metric_name = str(row['METRICS']).strip().lower()
 
+            # Determine visualization series
+            if "views" in metric_name:
+                sum_fields = ["shares", "comments"]
+                use_views_series = True
+            else:
+                sum_fields = ["engagement_total", "likes", "shares", "comments"]
+                use_views_series = False
+
+            query = {
+                "$skip": 0,
+                "$limit": 50,
+                "$sum_field": sum_fields,
+                "$search": search_phrase,
+                "$date_from": from_dt,
+                "$date_to": to_dt,
+                "$sort_field": "source_total_mentions",
+                "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
+                "$source_group_not_in": "off",
+                "$dashboard": 26036
+            }
+
+            if use_views_series:
+                query["$visualization_series"] = "views"
+            
             req = {
                 "service": "topics/:topic_id/:service",
                 "method": "find",
@@ -35,23 +59,7 @@ def export_top_sources(sheet, df_topics, df_params, from_dt, to_dt, api_endpoint
                         "topic_id": topic_id,
                         "service": "top-sources-by-field"
                     },
-                    "query": {
-                        "$skip": 0,
-                        "$limit": 50,
-                        "$sum_field": [
-                            "engagement_total",
-                            "likes",
-                            "shares",
-                            "comments"
-                        ],
-                        "$search": search_phrase,
-                        "$date_from": from_dt,
-                        "$date_to": to_dt,
-                        "$sort_field": "source_total_mentions",
-                        "$noise_filter_mode": "EXCLUDE_NOISE_SPAM",
-                        "$source_group_not_in": "off",
-                        "$dashboard": 26036
-                    }
+                    "query": query
                 }
             }
             batch_requests.append(req)
